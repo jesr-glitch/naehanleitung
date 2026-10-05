@@ -7,7 +7,7 @@ const base = (over = {}) => ({
   oberteil: { ...F.topDefaults(), lenKey: "huefte", len: null },
   kleid: { top: { ...F.topDefaults(), silhouette: "ausgestellt" }, taillennaht: false, rock: { form: "a_linie" }, lenKey: "knie", len: null },
   rock: { form: "a_linie", bund: "fest", taschen: false, lenKey: "knie", len: null },
-  hose: { bein: "gerade", bund: "gummizug", taschen: false, lenKey: "lang", len: null },
+  hose: { bein: "gerade", bund: "gummizug", leibhoehe: "normal", taschen: false, lenKey: "lang", len: null },
   sa: { seam: 1, hem: 2.5 }, fw: 140, ...over,
 });
 const SA = { seam: 1, hem: 2.5, fold: 0, facing: 4, casing: 3.5 };
@@ -25,8 +25,8 @@ function* variants() {
       yield base({ stoff, group, size, m, typ: "rock", rock: { form, bund: "gummizug", taschen: false, lenKey: "mini", len: null } });
       yield base({ stoff, group, size, m, typ: "kleid", kleid: { top: { ...F.topDefaults(), aermel: "kurz" }, taillennaht: true, rock: { form }, lenKey: "knie", len: null } });
     }
-    for (const bein of ["eng", "gerade", "weit", "jogger"]) for (const bund of ["fest", "gummizug"]) for (const lenKey of ["kurz", "lang"])
-      yield base({ stoff, group, size, m, typ: "hose", hose: { bein, bund, taschen: true, lenKey, len: null } });
+    for (const bein of ["eng", "gerade", "weit", "palazzo", "jogger"]) for (const bund of ["fest", "gummizug"]) for (const lenKey of ["kurz", "lang"]) for (const leibhoehe of ["normal", "tief", "hoch"])
+      yield base({ stoff, group, size, m, typ: "hose", hose: { bein, bund, leibhoehe, taschen: true, lenKey, len: null } });
   }
 }
 
@@ -84,4 +84,11 @@ test("Kragensteg ist so lang wie der halbe Halsausschnitt", () => {
 test("Länge folgt der Wahl", () => {
   const L = (lenKey) => F.getLen(base({ typ: "hose", hose: { bein: "gerade", bund: "fest", taschen: false, lenKey, len: null } }), "hose");
   assert.ok(L("kurz") < L("bermuda") && L("bermuda") < L("siebenachtel") && L("siebenachtel") < L("lang"));
+});
+
+test("Palazzo ist weiter als weit, tiefer Bund ist weiter als Taillenbund", () => {
+  const hem = (bein, leibhoehe = "normal") => F.draft(base({ typ: "hose", hose: { bein, bund: "fest", leibhoehe, taschen: false, lenKey: "lang", len: null } })).shape;
+  assert.ok(hem("palazzo").legs.at(-1)[1] > hem("weit").legs.at(-1)[1] * 1.2);
+  assert.ok(hem("weit", "tief").torso[0][1] > hem("weit").torso[0][1]);
+  assert.ok(hem("weit", "tief").torso[0][0] === 5 && hem("weit", "hoch").torso[0][0] === -4);
 });

@@ -228,18 +228,20 @@ function draftSkirt(m,o,ctx){
 /* ================= Konstruktion: Hose ================= */
 function draftPants(m,o,ctx){
   const J=ctx.jersey,R={pieces:[],notions:[],extras:[]};
-  const E={eng:J?-4:2,gerade:J?2:5,weit:J?6:10,jogger:J?4:8}[o.bein],elastic=o.bund==="gummizug";
+  const E={eng:J?-4:2,gerade:J?2:5,weit:J?6:10,palazzo:J?8:12,jogger:J?4:8}[o.bein],elastic=o.bund==="gummizug";
   const hipY=Math.min(20,m.R*.72),cy=m.R+1,fullL=cy+m.IL-1,cuff=o.bein==="jogger";
   let L=Math.max(cy+4,o.laenge);if(cuff)L-=5;
   const kneeY=cy+m.IL*.5-4;
-  const K={eng:m.H*.37,gerade:m.H*.46,weit:m.H*.62,jogger:m.H*.44}[o.bein],Hm={eng:m.H*.27,gerade:m.H*.43,weit:m.H*.7,jogger:m.H*.3}[o.bein];
+  const K={eng:m.H*.37,gerade:m.H*.46,weit:m.H*.62,palazzo:m.H*.86,jogger:m.H*.44}[o.bein],Hm={eng:m.H*.27,gerade:m.H*.43,weit:m.H*.7,palazzo:m.H*.94,jogger:m.H*.3}[o.bein];
+  // Bundhöhe: tief sitzt 5 cm unter der Taille, hoch 4 cm darüber
+  const rd={tief:5,hoch:-4}[o.leibhoehe]||0,Wt=rd>0?lerp(m.W,m.H,rd/hipY):m.W;
   const pd=[];
   [false,true].forEach(isBack=>{
     const W=(m.H+E)/4+(isBack?1:-1),ext=isBack?m.H/10+1.5:m.H/20+.5,crease=(W-ext)/2+(isBack?.5:0);
-    const kh=K/4+(isBack?1:-1),hh=Hm/4+(isBack?1:-1),cpY=isBack?cy+.8:cy,cw=isBack?[3,-2.8]:[.8,0];
+    const kh=K/4+(isBack?1:-1),hh=Hm/4+(isBack?1:-1),cpY=isBack?cy+.8:cy,cw=isBack?[3*(hipY-(rd-2.8))/(hipY+2.8),rd-2.8]:[.8*(hipY-rd)/hipY,rd];
     let swx=W,dart=0;
-    if(!elastic){const tq=m.W/4+(isBack?1:-1)+(J?0:.5),diff=Math.max(0,W-cw[0]-tq);let si=Math.min(diff,2.5);dart=diff-si;if(J||dart<.8){si=diff;dart=0}if(dart>4){dart=4;si=diff-4}swx=W-si}
-    const sideFull=catmull([[swx,0],[W,hipY],[crease+kh*1.02,kneeY],[crease+hh,fullL],[crease+hh+(hh-kh)*.2,fullL+20]],14);
+    if(!elastic){const tq=Wt/4+(isBack?1:-1)+(J?0:.5),diff=Math.max(0,W-cw[0]-tq);let si=Math.min(diff,2.5);dart=diff-si;if(J||dart<.8){si=diff;dart=0}if(dart>4){dart=4;si=diff-4}swx=W-si}
+    const sideFull=catmull([[swx,rd],[W,hipY],[crease+kh*1.02,kneeY],[crease+hh,fullL],[crease+hh+(hh-kh)*.2,fullL+20]],14);
     const side=cutY(sideFull,L),sE=side[side.length-1];
     const insFull=catmull([[-ext,cpY],[lerp(-ext,crease-kh,.5)+ext*.15,lerp(cpY,kneeY,.5)],[crease-kh,kneeY],[crease-hh,fullL],[crease-hh-(hh-kh)*.2,fullL+20]],14);
     pd.push({sideFull,insFull,swx,cw,W});
@@ -248,18 +250,18 @@ function draftPants(m,o,ctx){
     const crotch=bez([0,hipY],[d[0]*k,hipY+d[1]*k],[-ext*.5,cpY],[-ext,cpY],18).reverse();
     const marks=[{t:"dash",pts:[[crease,hipY+2],[crease,L-2]]}];
     if(L>kneeY+3)marks.push({t:"line",pts:[[crease-2,kneeY],[crease+2,kneeY]]},{t:"text",at:[crease+3.6,kneeY-.6],str:"Knie"});
-    if(dart>0){const x=isBack?(cw[0]+swx)/2:crease,yw=lerp(cw[1],0,(x-cw[0])/(swx-cw[0]));marks.push({t:"line",pts:[[x-dart/2,yw],[x,yw+(isBack?12:8)],[x+dart/2,yw]]})}
+    if(dart>0){const x=isBack?(cw[0]+swx)/2:crease,yw=lerp(cw[1],rd,(x-cw[0])/(swx-cw[0]));marks.push({t:"line",pts:[[x-dart/2,yw],[x,yw+(isBack?12:8)],[x+dart/2,yw]]})}
     R.pieces.push(mk({name:isBack?"Hinterhose":"Vorderhose",cut:"2× gegengleich",grainX:crease,edges:[
-      {pts:[cw,[swx,0]],sa:elastic?"casing":"seam"},{pts:side,sa:"seam"},{pts:[sE,iE],sa:cuff?"seam":"hem"},
+      {pts:[cw,[swx,rd]],sa:elastic?"casing":"seam"},{pts:side,sa:"seam"},{pts:[sE,iE],sa:cuff?"seam":"hem"},
       {pts:ins.slice().reverse(),sa:"seam"},{pts:crotch,sa:"seam"},{pts:[[0,hipY],cw],sa:!isBack&&!elastic&&!J?"facing":"seam"}],
       notches:[isBack?{edge:1,d:plen(cutY(sideFull,hipY)),double:true}:{edge:1,d:plen(cutY(sideFull,hipY))}],marks,labelAt:[crease,hipY+(L-hipY)*.3]}));
   });
   {const xAt=(P,y)=>{for(let i=1;i<P.length;i++)if(P[i][1]>=y){const a=P[i-1],b=P[i],u=(y-a[1])/((b[1]-a[1])||1);return lerp(a[0],b[0],u)}return P[P.length-1][0]};
    const[F,B]=pd,lc=y=>(xAt(F.sideFull,y)-xAt(F.insFull,y))+(xAt(B.sideFull,y)-xAt(B.insFull,y)),legs=[];for(let y=cy+1;y<L;y+=4)legs.push([y,lc(y)]);legs.push([L,lc(L)]);
-   R.shape={kind:"pants",cy,L,cuff:cuff?5:0,band:!elastic,torso:[[0,2*((F.swx-F.cw[0])+(B.swx-B.cw[0]))],[hipY,2*(F.W+B.W)],[cy-1,2*(F.W+B.W)]],legs}}
-  if(!elastic){R.pieces.push(rectPiece("Bund","1×",8,Math.round(m.W+4),{foldLine:"v",rotatable:true}));
+   R.shape={kind:"pants",cy,L,cuff:cuff?5:0,band:!elastic,torso:[[rd,2*((F.swx-F.cw[0])+(B.swx-B.cw[0]))],[hipY,2*(F.W+B.W)],[cy-1,2*(F.W+B.W)]],legs}}
+  if(!elastic){R.pieces.push(rectPiece("Bund","1×",8,Math.round(Wt+4),{foldLine:"v",rotatable:true}));
     if(!J){R.notions.push("Hosenreißverschluss, 18 cm");R.notions.push("1 Hosenknopf oder Haken");R.notions.push("Bügeleinlage für Bund und Schlitz");R.extras.push("Hosenschlitz: Untertritt 1× 8 × 20 cm im Stoffbruch zuschneiden. Der Übertritt ist an der vorderen Mitte angeschnitten (4 cm).")}}
-  else{R.notions.push(`Gummiband 3 cm breit, ${fmt(Math.round(m.W*.9))} cm lang`);R.notions.push("Optional: Kordel 150 cm")}
+  else{R.notions.push(`Gummiband 3 cm breit, ${fmt(Math.round(Wt*.9))} cm lang`);R.notions.push("Optional: Kordel 150 cm")}
   if(cuff)R.pieces.push(rectPiece("Beinbündchen","2× (Bündchenware)",Math.round(Hm*.8),14,{foldLine:"h",stretch:true,mat:J?"rib":"main"}));
   if(o.taschen)R.pieces.push(rectPiece("Gesäßtasche","2×",14,15,{types:["hem","seam","seam","seam"]}));
   return R;
@@ -352,7 +354,8 @@ const TOP_OPTS=[
 const TOP_TOG=[["kapuze","Kapuze"],["taschen","Tasche"],["buendchen","Bündchen"],["manschetten","Manschetten"]];
 const FORM_OPTS=[["bleistift","Bleistift"],["gerade","Gerade"],["a_linie","A-Linie"],["ausgestellt","Ausgestellt"],["halbteller","Halbteller"],["teller","Teller"],["gerafft","Gerafft"]];
 const BUND_OPTS=[["fest","Fester Bund"],["gummizug","Gummizug"]];
-const LEG_OPTS=[["eng","Eng"],["gerade","Gerade"],["weit","Weit"],["jogger","Jogger"]];
+const LEG_OPTS=[["eng","Eng"],["gerade","Gerade"],["weit","Weit"],["palazzo","Sehr weit"],["jogger","Jogger"]];
+const RISE_OPTS=[["normal","Taille"],["tief","Tief (Hüfte)"],["hoch","Hoch"]];
 const LENS={oberteil:[["bauchfrei","Bauchfrei"],["huefte","Hüfte"],["po","Po"],["oberschenkel","Oberschenkel"]],kleid:[["mini","Mini"],["knie","Knie"],["midi","Midi"],["maxi","Maxi"]],rock:[["mini","Mini"],["knie","Knie"],["midi","Midi"],["maxi","Maxi"]],hose:[["kurz","Kurz"],["bermuda","Bermuda"],["siebenachtel","7/8"],["lang","Lang"]]};
 const TYPES=[["oberteil","Oberteil"],["kleid","Kleid"],["rock","Rock"],["hose","Hose"]];
 
@@ -361,7 +364,7 @@ function defaultTitle(S){
   if(S.typ==="oberteil"){const o=S.oberteil;if(o.kapuze)return"Hoodie";if(o.verschluss==="knopfleiste")return"Bluse";if(o.aermel==="ohne")return"Top";return o.aermel==="lang"?"Langarmshirt":"Basic-T-Shirt"}
   if(S.typ==="kleid")return S.kleid.taillennaht?"Kleid mit Taillennaht":"Hängerkleid";
   if(S.typ==="rock")return({bleistift:"Bleistiftrock",gerade:"Gerader Rock",a_linie:"A-Linien-Rock",ausgestellt:"Ausgestellter Rock",halbteller:"Halbtellerrock",teller:"Tellerrock",gerafft:"Gekräuselter Rock"})[S.rock.form];
-  return({eng:"Schmale Hose",gerade:"Gerade Hose",weit:"Weite Hose",jogger:"Jogger"})[S.hose.bein];
+  return({eng:"Schmale Hose",gerade:"Gerade Hose",weit:"Weite Hose",palazzo:"Palazzohose",jogger:"Jogger"})[S.hose.bein];
 }
 function sizeLabel(S){return S.size!=="eigene"&&SIZES[S.group][S.size]?`Gr. ${S.size} ${S.group==="damen"?"Damen":"Herren"}`:"Eigene Maße"}
 
@@ -409,4 +412,4 @@ function defaultSteps(S,R){
 }
 
 
-export {BUND_OPTS,FORM_OPTS,LEG_OPTS,LEN,LENS,MKEYS,SIZES,TOP_OPTS,TOP_TOG,TYPES,TYPNAME,arc,area,arrowHead,bbox,bez,buildPiece,capCurve,catmull,clean,cutY,defaultSteps,defaultTitle,dist,draft,draftPants,draftSkirt,draftTop,esc,fabricNeed,finishHem,fmt,getLen,lerp,lineX,mk,norm,offsetPiece,outline,packSheet,plen,pointAt,rectPiece,sizeLabel,sizeM,solveCap,svgList,topDefaults};
+export {BUND_OPTS,FORM_OPTS,LEG_OPTS,LEN,LENS,MKEYS,SIZES,TOP_OPTS,TOP_TOG,TYPES,TYPNAME,arc,area,arrowHead,bbox,bez,buildPiece,capCurve,catmull,clean,cutY,defaultSteps,defaultTitle,dist,draft,draftPants,draftSkirt,draftTop,esc,fabricNeed,finishHem,fmt,getLen,lerp,lineX,mk,norm,offsetPiece,outline,packSheet,plen,pointAt,rectPiece,sizeLabel,sizeM,solveCap,svgList,topDefaults,RISE_OPTS};

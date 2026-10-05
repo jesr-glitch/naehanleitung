@@ -40,7 +40,8 @@ export const SCHEMA = obj({
     taschen: bool,
   }),
   hose: obj({
-    bein: e("eng", "gerade", "weit", "jogger"),
+    bein: e("eng", "gerade", "weit", "palazzo", "jogger"),
+    leibhoehe: e("normal", "tief", "hoch"),
     laenge: e("kurz", "bermuda", "siebenachtel", "lang"),
     bund: e("fest", "gummizug"),
     taschen: bool,
@@ -60,10 +61,11 @@ Vorgehen:
    - typ "oberteil": "oberteil" mit allen Feldern.
    - typ "kleid": "oberteil" für das Oberteil (laenge egal), "kleid", und bei Taillennaht "rock.form" für den Rockteil.
    - typ "rock": "rock". typ "hose": "hose".
-4. Hemden, Jacken und Mäntel ordnest du dem nächsten Oberteil zu (z. B. Knopfleiste, Hemdkragen, Manschetten, lockere Passform). Overalls ordnest du "hose" zu.
-5. "nicht_abgebildet": Details des Originals, die der Grundschnitt nicht abbildet (z. B. Passe, Raglanärmel, Volants, Reverskragen), jeweils mit einem kurzen Tipp, wie man es ergänzt. Leere Liste, wenn alles abgebildet ist.
-6. "schritte": 6 bis 12 konkrete Nähschritte in der richtigen Reihenfolge, passend zu genau diesen Optionen. "zutaten": Zutaten mit Menge.
-7. "fehler": leerer String. Nur wenn kein Kleidungsstück zu erkennen ist, eine kurze Begründung.
+4. Hosen: "palazzo", wenn das Bein ab der Hüfte gerade und sehr weit fällt; "weit" für eine normale weite Hose. "leibhoehe": "tief", wenn der Bund deutlich unter der Taille auf der Hüfte sitzt, "hoch" für High Waist.
+5. Hemden, Jacken und Mäntel ordnest du dem nächsten Oberteil zu (z. B. Knopfleiste, Hemdkragen, Manschetten, lockere Passform). Overalls ordnest du "hose" zu.
+6. "nicht_abgebildet": Details des Originals, die der Grundschnitt nicht abbildet (z. B. Passe, Raglanärmel, Volants, Reverskragen), jeweils mit einem kurzen Tipp, wie man es ergänzt. Leere Liste, wenn alles abgebildet ist.
+7. "schritte": 6 bis 12 konkrete Nähschritte in der richtigen Reihenfolge, passend zu genau diesen Optionen. "zutaten": Zutaten mit Menge.
+8. "fehler": leerer String. Nur wenn kein Kleidungsstück zu erkennen ist, eine kurze Begründung.
 
 Schreib alle Texte auf Deutsch, knapp und konkret.`;
 

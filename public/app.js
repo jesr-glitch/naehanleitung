@@ -1,6 +1,6 @@
 // Fadenlauf – Oberfläche: Bedienung, Vorschau, 3D-Skizze, Analyse, Export.
 import * as F from "./engine.js";
-const {BUND_OPTS,FORM_OPTS,LEG_OPTS,LEN,LENS,MKEYS,SIZES,TOP_OPTS,TOP_TOG,TYPES,TYPNAME,arc,area,arrowHead,bbox,bez,buildPiece,capCurve,catmull,clean,cutY,dist,draftPants,draftSkirt,draftTop,esc,fabricNeed,finishHem,fmt,lerp,lineX,mk,norm,offsetPiece,outline,packSheet,plen,pointAt,rectPiece,sizeM,solveCap,svgList,topDefaults}=F;
+const {RISE_OPTS,BUND_OPTS,FORM_OPTS,LEG_OPTS,LEN,LENS,MKEYS,SIZES,TOP_OPTS,TOP_TOG,TYPES,TYPNAME,arc,area,arrowHead,bbox,bez,buildPiece,capCurve,catmull,clean,cutY,dist,draftPants,draftSkirt,draftTop,esc,fabricNeed,finishHem,fmt,lerp,lineX,mk,norm,offsetPiece,outline,packSheet,plen,pointAt,rectPiece,sizeM,solveCap,svgList,topDefaults}=F;
 const getLen=t=>F.getLen(S,t),draft=()=>F.draft(S),defaultTitle=()=>F.defaultTitle(S),sizeLabel=()=>F.sizeLabel(S),defaultSteps=R=>F.defaultSteps(S,R);
 const $=s=>document.querySelector(s);
 /* ================= Zustand ================= */
@@ -10,7 +10,7 @@ const S={
   oberteil:{...topDefaults(),lenKey:"huefte",len:null},
   kleid:{top:{...topDefaults(),silhouette:"ausgestellt"},taillennaht:false,rock:{form:"a_linie"},lenKey:"knie",len:null},
   rock:{form:"a_linie",bund:"fest",taschen:false,lenKey:"knie",len:null},
-  hose:{bein:"gerade",bund:"gummizug",taschen:false,lenKey:"lang",len:null},
+  hose:{bein:"gerade",bund:"gummizug",leibhoehe:"normal",taschen:false,lenKey:"lang",len:null},
   sa:{seam:1,hem:2.5},fw:140,title:null,analysis:null,example:true};
 try{const saved=JSON.parse(localStorage.getItem("fadenlauf-masse")||"null");if(saved&&saved.m&&MKEYS.every(([k])=>typeof saved.m[k]==="number")){S.m=saved.m;S.group=saved.group||"damen";S.size=saved.size||"eigene"}}catch(e){}
 let MODE=(()=>{try{return localStorage.getItem("fadenlauf-modus")||"easy"}catch(e){return"easy"}})();
@@ -69,7 +69,7 @@ function buildControls(){
   else if(S.typ==="kleid"){addTop(S.kleid.top,true);box.append(toggles(S.kleid,[["taillennaht","Taillennaht mit angesetztem Rock"]],"Aufbau"));
     if(S.kleid.taillennaht)box.append(seg("Rockform",FORM_OPTS,S.kleid.rock.form,v=>{S.kleid.rock.form=v}));box.append(lenField("kleid","Länge ab Taille"))}
   else if(S.typ==="rock"){box.append(seg("Form",FORM_OPTS,S.rock.form,v=>{S.rock.form=v}),seg("Bund",BUND_OPTS,S.rock.bund,v=>{S.rock.bund=v}),toggles(S.rock,[["taschen","Aufgesetzte Taschen"]],"Details"),lenField("rock","Länge ab Taille"))}
-  else{box.append(seg("Beinform",LEG_OPTS,S.hose.bein,v=>{S.hose.bein=v}),seg("Bund",BUND_OPTS,S.hose.bund,v=>{S.hose.bund=v}),toggles(S.hose,[["taschen","Gesäßtaschen"]],"Details"),lenField("hose","Länge ab Taille"))}
+  else{box.append(seg("Beinform",LEG_OPTS,S.hose.bein,v=>{S.hose.bein=v}),seg("Bundhöhe",RISE_OPTS,S.hose.leibhoehe||"normal",v=>{S.hose.leibhoehe=v}),seg("Bund",BUND_OPTS,S.hose.bund,v=>{S.hose.bund=v}),toggles(S.hose,[["taschen","Gesäßtaschen"]],"Details"),lenField("hose","Länge ab Taille"))}
   const ss=$("#stoffSeg");ss.innerHTML="";ss.append(...seg(null,[["jersey","Jersey / dehnbar"],["webware","Webware / fest"]],S.stoff,v=>{S.stoff=v;S.sa.hem=v==="jersey"?2:2.5;S.sa.seam=v==="jersey"?.75:1}).children[0].children);
   $("#saSeam").value=S.sa.seam;$("#saHem").value=S.sa.hem;$("#fw").value=S.fw;
 }
@@ -243,7 +243,7 @@ function build3D(animate=true){
     const tr=garmRings(sh.torso,waistY,.72,true),g=addLoft(V.garm,tr,go);ringLine(V.garm,g,0,lo);seam(V.garm,g,0,lo);seam(V.garm,g,g.userData.N/2,lo);seam(V.garm,g,g.userData.N/4,lo);
     if(sh.band)ringLine(V.garm,loftGeo([{y:waistY-4,a:tr[0].a,b:tr[0].b}]),0,lo);
     for(const sx of[-1,1]){
-      const rs=[[sh.cy-4,sh.legs[0][1]],...sh.legs].map(([yy,C])=>{const y=waistY-yy,[a,b]=ell(C,.9),l=ringsAt(legR,y),r={y,cx:sx*legX,a:Math.max(a,l.a*1.04+.3),b:Math.max(b,l.b*1.04+.3)},e=circ(r.a,r.b)/circ(l.a,l.b)-1;if(e>.35){const e2=.35+(e-.35)*.55,f=(1+e2)/(1+e);r.a*=f;r.b*=f;r.amp=Math.min(.12,(e-e2)*.08);r.n=7}return r});
+      const rs=[[sh.cy-4,sh.legs[0][1]],...sh.legs].map(([yy,C])=>{const y=waistY-yy,[a,b]=ell(C,.9),l=ringsAt(legR,y),r={y,cx:sx*legX,a:Math.max(a,l.a*1.04+.3),b:Math.max(b,l.b*1.04+.3)},e=circ(r.a,r.b)/circ(l.a,l.b)-1;if(e>.35){const e2=.35+(e-.35)*.85,f=(1+e2)/(1+e);r.a*=f;r.b*=f;r.amp=Math.min(.12,(e-e2)*.08);r.n=7}return r});
       if(sh.cuff){const l=rs[rs.length-1];rs.push({...l,y:l.y-.4,a:l.a*.82,b:l.b*.82,amp:0},{...l,y:l.y-sh.cuff,a:l.a*.8,b:l.b*.8,amp:0})}
       const gl=addLoft(V.garm,rs,go),N=gl.userData.N;seam(V.garm,gl,sx>0?0:N/2,lo);seam(V.garm,gl,sx>0?N/2:0,lo);seam(V.garm,gl,N/4,{lc,dash:true});ringLine(V.garm,gl,rs.length-1,lo)}
   }
@@ -305,7 +305,7 @@ function renderSummary(){
     if(o.verschluss!=="keiner")c.push(lab(TOP_OPTS,"verschluss",o.verschluss));for(const[k,t]of TOP_TOG)if(o[k])c.push(t)}
   if(S.typ==="kleid"||S.typ==="rock"||S.typ==="hose"||S.typ==="oberteil"){const lk=S[S.typ].lenKey,le=(LENS[S.typ].find(x=>x[0]===lk)||[,"eigene"])[1];c.push("Länge: "+le)}
   if(S.typ==="rock")c.push("Form: "+(FORM_OPTS.find(x=>x[0]===S.rock.form)||[,S.rock.form])[1]);
-  if(S.typ==="hose")c.push("Bein: "+(LEG_OPTS.find(x=>x[0]===S.hose.bein)||[,S.hose.bein])[1]);
+  if(S.typ==="hose")c.push("Bein: "+(LEG_OPTS.find(x=>x[0]===S.hose.bein)||[,S.hose.bein])[1],"Bundhöhe: "+(RISE_OPTS.find(x=>x[0]===(S.hose.leibhoehe||"normal"))||[,""])[1]);
   c.push(S.stoff==="jersey"?"Jersey":"Webware");
   box.innerHTML=`<span class="lbl">So setzt Fadenlauf es um</span><div class="chips">${c.map(t=>`<span>${esc(t)}</span>`).join("")}</div><p class="hint" style="margin:6px 0 0">Stimmt etwas nicht? Im Profi-Modus kannst du jede Option ändern.</p>`;
 }
@@ -316,7 +316,7 @@ function applyAnalysis(a){
   if(typ==="oberteil"){applyTop(S.oberteil);S.oberteil.lenKey=pick(T.laenge,LENS.oberteil.map(x=>x[0]),"huefte")}
   if(typ==="kleid"){applyTop(S.kleid.top);const K=a.kleid||{};S.kleid.taillennaht=!!K.taillennaht;S.kleid.lenKey=pick(K.laenge,LENS.kleid.map(x=>x[0]),"knie");if(a.rock)S.kleid.rock.form=pick(a.rock.form,FORM_OPTS.map(x=>x[0]),"a_linie")}
   if(typ==="rock"){const r=a.rock||{};S.rock.form=pick(r.form,FORM_OPTS.map(x=>x[0]),"a_linie");S.rock.bund=pick(r.bund,["fest","gummizug"],"fest");S.rock.taschen=!!r.taschen;S.rock.lenKey=pick(r.laenge,LENS.rock.map(x=>x[0]),"knie")}
-  if(typ==="hose"){const h=a.hose||{};S.hose.bein=pick(h.bein,LEG_OPTS.map(x=>x[0]),"gerade");S.hose.bund=pick(h.bund,["fest","gummizug"],"gummizug");S.hose.taschen=!!h.taschen;S.hose.lenKey=pick(h.laenge,LENS.hose.map(x=>x[0]),"lang")}
+  if(typ==="hose"){const h=a.hose||{};S.hose.bein=pick(h.bein,LEG_OPTS.map(x=>x[0]),"gerade");S.hose.bund=pick(h.bund,["fest","gummizug"],"gummizug");S.hose.leibhoehe=pick(h.leibhoehe,RISE_OPTS.map(x=>x[0]),"normal");S.hose.taschen=!!h.taschen;S.hose.lenKey=pick(h.laenge,LENS.hose.map(x=>x[0]),"lang")}
   S.title=typeof a.erkannt==="string"&&a.erkannt.trim()?a.erkannt.trim().slice(0,60):null;S.analysis={...a,typ};S.example=false;
   const r=$("#aResult");r.hidden=false;r.innerHTML="";
   const h=document.createElement("h3");h.textContent=S.title||"Erkannt";const p=document.createElement("p");p.style.margin="0";p.textContent=a.beschreibung||"";r.append(h,p);
@@ -360,13 +360,13 @@ function applyPreset(k){
   if(k==="bluse"){S.typ="oberteil";S.stoff="webware";S.oberteil={...t,aermel:"lang",verschluss:"knopfleiste",kragen:"hemdkragen",manschetten:true,taschen:true,lenKey:"po",len:null}}
   if(k==="kleid"){S.typ="kleid";S.stoff="jersey";S.kleid={top:{...t,silhouette:"ausgestellt"},taillennaht:false,rock:{form:"a_linie"},lenKey:"knie",len:null}}
   if(k==="rock"){S.typ="rock";S.stoff="webware";S.rock={form:"a_linie",bund:"gummizug",taschen:false,lenKey:"knie",len:null}}
-  if(k==="hose"){S.typ="hose";S.stoff="jersey";S.hose={bein:"gerade",bund:"gummizug",taschen:false,lenKey:"lang",len:null}}
+  if(k==="hose"){S.typ="hose";S.stoff="jersey";S.hose={bein:"gerade",bund:"gummizug",leibhoehe:"normal",taschen:false,lenKey:"lang",len:null}}
   S.sa.seam=S.stoff==="jersey"?.75:1;S.sa.hem=S.stoff==="jersey"?2:2.5;
 }
 function applyKeyfacts(){
   if(!E.base||E.base.typ!==S.typ)return;const o=S[S.typ];Object.assign(o,JSON.parse(E.base.o));const f=E.fit;
   if(f){if(S.typ==="oberteil")o.passform=f;else if(S.typ==="kleid")o.top.passform=f;
-    else if(S.typ==="hose"){if(o.bein!=="jogger")o.bein=f==="eng"?"eng":f==="normal"?"gerade":"weit"}
+    else if(S.typ==="hose"){if(o.bein!=="jogger")o.bein=f==="eng"?"eng":f==="normal"?"gerade":f==="locker"?"weit":"palazzo"}
     else if(S.typ==="rock"){if(f==="eng"&&["gerade","a_linie"].includes(o.form))o.form="bleistift";if((f==="locker"||f==="oversize")&&["bleistift","gerade","a_linie"].includes(o.form))o.form="ausgestellt";if(f==="normal"&&o.form==="bleistift")o.form="gerade"}}
   if(E.len){const keys=LENS[S.typ].map(x=>x[0]);let i=keys.indexOf(o.lenKey);if(i<0)i=1;o.lenKey=keys[Math.max(0,Math.min(keys.length-1,i+(E.len==="laenger"?1:-1)))]}
 }
