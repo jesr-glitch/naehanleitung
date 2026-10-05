@@ -1,0 +1,19 @@
+# Render Blueprint: ein Klick auf „Deploy to Render“ in der README legt den Dienst an.
+services:
+  - type: web
+    name: fadenlauf
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: TRUST_PROXY
+        value: "1"
+      - key: ANALYZE_PER_DAY
+        value: "100"
+      - key: ANTHROPIC_API_KEY
+        sync: false

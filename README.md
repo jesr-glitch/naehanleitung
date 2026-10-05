@@ -6,6 +6,16 @@ Schnittmuster aus einem Foto. Foto hochladen, Größe wählen, sagen wie es sitz
 - **Profi-Modus:** eigene Körpermaße, alle Modelloptionen, Naht- und Saumzugaben, Stoffbreite, Export als A4, Letter, Plotter-PDF und SVG 1:1.
 - **Installierbar (PWA):** läuft wie eine App auf dem Startbildschirm; Schnittkonstruktion, 3D und PDF funktionieren auch offline.
 
+## Live stellen in 3 Minuten
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/jesr-glitch/naehanleitung)
+
+1. Auf den Knopf klicken und mit GitHub bei Render anmelden. Render fragt einmalig nach Zugriff auf dieses Repository.
+2. Bei `ANTHROPIC_API_KEY` deinen Schlüssel aus der [Anthropic Console](https://console.anthropic.com/settings/keys) einfügen und **Apply** klicken.
+3. Nach etwa zwei Minuten ist die App unter `https://fadenlauf-….onrender.com` erreichbar.
+
+Der kostenlose Render-Tarif schläft nach 15 Minuten ohne Besucher ein; der erste Aufruf danach dauert dann etwa eine Minute. Zum Ausprobieren reicht das. Die Tagesgrenze steht zum Testen auf 100 Analysen (`ANALYZE_PER_DAY`).
+
 ## Schnellstart
 
 ```bash
