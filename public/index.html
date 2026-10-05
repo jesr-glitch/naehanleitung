@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Fadenlauf</title>
+<meta name="description" content="Foto hochladen, Größe wählen, Schnittmuster in Originalgröße ausdrucken – mit Zuschnitt, Nähanleitung und 3D-Vorschau.">
+<meta name="theme-color" content="#23493c">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Fadenlauf">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preload" href="/fonts/young-serif-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/styles.css">
+<script src="/vendor/jspdf.umd.min.js" defer></script>
+<script src="/vendor/three.min.js"></script>
+<script type="module" src="/app.js"></script>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><rect width="44" height="44" rx="10" fill="var(--mat)"/><path d="M10 33 L33 10" stroke="#fbfbf6" stroke-width="2.2" stroke-linecap="round"/><ellipse cx="31" cy="12" rx="2.6" ry="1.2" transform="rotate(-45 31 12)" fill="none" stroke="var(--mat)" stroke-width="1"/><path d="M9 12 C 16 16, 14 26, 22 30 S 33 31, 35 35" fill="none" stroke="#c2264b" stroke-width="1.6" stroke-dasharray="3 2.4"/></svg>
+    <div>
+      <h1>Fadenlauf</h1>
+      <p>Foto hochladen, Größe wählen, sagen wie es sitzen soll. Du bekommst das Schnittmuster in Originalgröße zum Ausdrucken, mit Zuschnitt und Nähanleitung.</p>
+    </div>
+    <div class="modes"><button class="btn small" id="install" type="button" hidden>App installieren</button><span class="lbl">Modus</span><div class="seg" id="modeSeg"><button type="button" data-mode="easy">Einfach</button><button type="button" data-mode="pro">Profi</button></div></div>
+  </header>
+
+  <div class="layout">
+    <aside class="panel">
+      <section class="step">
+        <h2><span class="pin">1</span>Foto</h2>
+        <label class="drop" id="drop">
+          <input type="file" id="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M8 4 5 6l-3 4 3 2 1-1v9h12v-9l1 1 3-2-3-4-3-2c0 1.7-1.8 3-4 3S8 5.7 8 4Z"/></svg>
+          <span><strong>Foto auswählen</strong> oder hierher ziehen</span>
+          <span style="font-size:12px">Am besten flach liegend oder getragen, von vorne. Eine Rückansicht hilft zusätzlich.</span>
+        </label>
+        <div class="thumbs" id="thumbs"></div>
+        <p class="pstate" id="pState" hidden></p>
+        <div class="field" id="descBox" hidden><label class="lbl" for="desc">Kurz beschreiben (optional)</label><textarea id="desc" rows="3" placeholder="z. B. Kariertes Flanellhemd, locker, Knopfleiste, Brusttaschen, Hemdkragen, lange Ärmel mit Manschetten"></textarea><small class="hint" id="descHint">Optional. Hilft Claude bei Details, die auf dem Foto schlecht zu sehen sind.</small></div>
+        <div class="row">
+          <button class="btn primary pro-only" id="analyze" disabled>Schnitt aus Foto ableiten</button>
+          <button class="btn" id="stop" hidden>Stopp</button>
+        </div>
+        <p class="status" id="aStatus"></p>
+        <div class="result" id="aResult" hidden></div>
+      </section>
+
+      <section class="step easy-only">
+        <h2><span class="pin">2</span>Deine Größe</h2>
+        <div class="seg" id="eGroup"></div>
+        <div class="seg sizes" id="eSize"></div>
+        <p class="hint" id="eSizeHint" style="margin:0"></p>
+      </section>
+
+      <section class="step easy-only">
+        <h2><span class="pin">3</span>Wie soll es sitzen?</h2>
+        <div class="field"><span class="lbl">Passform</span><div class="seg" id="eFit"></div></div>
+        <div class="field"><span class="lbl">Länge</span><div class="seg" id="eLen"></div></div>
+        <div class="field"><span class="lbl" id="eKindLbl">Was ist es? (optional)</span><div class="seg" id="eKind"></div></div>
+        <button class="btn primary big" id="create" type="button">Schnittmuster erstellen</button>
+        <p class="status" id="eStatus"></p>
+      </section>
+
+      <section class="step pro-only">
+        <h2><span class="pin">2</span>Modell</h2>
+        <div class="seg big" id="typSeg"></div>
+        <div id="modelOpts" style="display:flex;flex-direction:column;gap:12px"></div>
+      </section>
+
+      <section class="step pro-only">
+        <h2><span class="pin">3</span>Maße</h2>
+        <div class="row">
+          <select id="group" aria-label="Größentabelle"><option value="damen">Damen (DE)</option><option value="herren">Herren (DE)</option></select>
+          <select id="size" aria-label="Größe"></select>
+        </div>
+        <div class="mgrid" id="measures"></div>
+        <p class="note" style="margin:0">Mit einem Maßband direkt am Körper messen, nicht zu straff. Die Bewegungsweite rechnet Fadenlauf selbst dazu.</p>
+      </section>
+
+      <section class="step pro-only">
+        <h2><span class="pin">4</span>Stoff &amp; Zugaben</h2>
+        <div class="field"><span class="lbl">Stoffart</span><div class="seg" id="stoffSeg"></div></div>
+        <div class="mgrid">
+          <div class="m"><label for="saSeam">Nahtzugabe</label><div class="unit"><input type="number" id="saSeam" step="0.25" min="0" max="3"></div></div>
+          <div class="m"><label for="saHem">Saumzugabe</label><div class="unit"><input type="number" id="saHem" step="0.5" min="0" max="6"></div></div>
+          <div class="m"><label for="fw">Stoffbreite</label><div class="unit"><input type="number" id="fw" step="5" min="90" max="300"></div></div>
+        </div>
+      </section>
+    </aside>
+
+    <main>
+      <div class="sheethead">
+        <div>
+          <div class="eyebrow" id="badge">Beispiel</div>
+          <h2 id="sheetTitle">Basic-T-Shirt</h2>
+          <div class="sub" id="sheetSub"></div>
+        </div>
+        <div class="exports" id="exports">
+          <button class="btn small" data-x="a4">PDF A4</button>
+          <button class="btn small pro-only" data-x="letter">PDF Letter</button>
+          <button class="btn small pro-only" data-x="plot">PDF Plotter</button>
+          <button class="btn small pro-only" data-x="svg">SVG 1:1</button>
+        </div>
+      </div>
+      <section class="viewer" id="viewer">
+        <canvas id="v3" aria-label="Dreidimensionale Vorschau des Kleidungsstücks"></canvas>
+        <div class="vbar">
+          <div class="swatches" id="swatches" role="group" aria-label="Stofffarbe"></div>
+          <div class="row" style="gap:6px"><button type="button" class="tog" id="vFig" aria-pressed="true">Figur</button><button type="button" class="tog" id="vSpin" aria-pressed="true">Drehen</button></div>
+        </div>
+        <p class="vhint" id="vHint">Ziehen zum Drehen · vereinfachte Skizze, der echte Stoff fällt weicher</p>
+      </section>
+      <div class="matwrap" id="matWrap">
+        <div class="mattools"><button id="zoomOut" aria-label="Verkleinern">−</button><button id="zoomIn" aria-label="Vergrößern">+</button></div>
+        <svg id="sheet" role="img" aria-label="Schnittbogen mit allen Schnittteilen"></svg>
+      </div>
+      <div class="legend">
+        <span><i></i>Schnittkante (mit Zugabe)</span>
+        <span><i class="s"></i>Nählinie</span>
+        <span><i class="n"></i>Knipse (Passzeichen)</span>
+        <span>Raster: 1 cm / 10 cm</span>
+      </div>
+      <p class="warnbox" id="dlNote" hidden></p>
+
+      <div class="info">
+        <section class="card">
+          <h3>Zuschnitt</h3>
+          <table><thead><tr><th>Teil</th><th>Anzahl</th></tr></thead><tbody id="cutBody"></tbody></table>
+          <div class="fabric" id="fabric"></div>
+          <ul class="plain note" id="extras"></ul>
+        </section>
+        <section class="card">
+          <h3>Zutaten</h3>
+          <ul class="plain" id="notions"></ul>
+          <p class="note" id="fabricRec"></p>
+        </section>
+        <section class="card wide">
+          <h3>Nähanleitung</h3>
+          <p class="src" id="stepsSrc"></p>
+          <ol class="steps" id="steps"></ol>
+          <p class="note">Fadenlauf zeichnet einen Grundschnitt nach deinen Maßen. Nähe zuerst ein Probeteil aus günstigem Stoff und übertrage Änderungen auf den Papierschnitt, bevor du den guten Stoff zuschneidest.</p>
+        </section>
+      </div>
+    </main>
+  </div>
+  <footer class="foot">
+    <span>Fadenlauf · Grundschnitte nach deinen Maßen. Nähe zuerst ein Probeteil.</span>
+    <nav><a href="/impressum.html">Impressum</a><a href="/datenschutz.html">Datenschutz</a></nav>
+  </footer>
+</div>
+</body>
+</html>

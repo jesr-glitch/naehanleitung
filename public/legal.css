@@ -1,0 +1,11 @@
+@font-face{font-family:"Instrument Sans";src:url(/fonts/instrument-sans-400.woff2) format("woff2");font-weight:400}
+@font-face{font-family:"Young Serif";src:url(/fonts/young-serif-400.woff2) format("woff2");font-weight:400}
+:root{--bg:#edf0ec;--fg:#1b231f;--muted:#5b6861;--accent:#c2264b;--mark:#f6dde3}
+@media (prefers-color-scheme:dark){:root{--bg:#111613;--fg:#e4ebe6;--muted:#97a59d;--accent:#ec5c7c;--mark:#3a1d25;color-scheme:dark}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 "Instrument Sans",system-ui,sans-serif}
+main{max-width:68ch;margin:0 auto;padding:32px 16px 64px}
+h1,h2{font-family:"Young Serif",Georgia,serif;font-weight:400}
+h1{font-size:32px}h2{font-size:21px;margin-top:2em}
+a{color:var(--accent)}
+.todo{background:var(--mark);padding:1px 4px;border-radius:3px}
+.back{font-size:14px}

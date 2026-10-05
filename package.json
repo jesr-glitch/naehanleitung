@@ -1,0 +1,25 @@
+{
+  "name": "fadenlauf",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Schnittmuster aus einem Foto: Größe wählen, Schnitt in Originalgröße ausdrucken.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "postinstall": "node scripts/vendor.mjs",
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/instrument-sans": "^5.3.0",
+    "@fontsource/young-serif": "^5.3.0",
+    "jspdf": "4.2.1",
+    "three": "0.128.0"
+  }
+}
