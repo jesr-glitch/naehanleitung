@@ -13,6 +13,7 @@ function plen(pts){let s=0;for(let i=1;i<pts.length;i++)s+=dist(pts[i-1],pts[i])
 function pointAt(pts,d){let s=0;for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i],l=dist(a,b);if(s+l>=d||i===pts.length-1){const u=l?Math.min(1,Math.max(0,(d-s)/l)):0;return{p:[lerp(a[0],b[0],u),lerp(a[1],b[1],u)],t:norm([b[0]-a[0],b[1]-a[1]])}}s+=l}return{p:pts[0],t:[1,0]}}
 function catmull(P0,n=14){const P=[P0[0],...P0,P0[P0.length-1]],o=[];for(let i=1;i<P.length-2;i++){const a=P[i-1],b=P[i],c=P[i+1],d=P[i+2];for(let k=i===1?0:1;k<=n;k++){const t=k/n,t2=t*t,t3=t2*t;o.push([0,1].map(j=>0.5*(2*b[j]+(-a[j]+c[j])*t+(2*a[j]-5*b[j]+4*c[j]-d[j])*t2+(-a[j]+3*b[j]-3*c[j]+d[j])*t3)))}}return o}
 function cutY(pts,y){if(pts[0][1]>=y)return[pts[0],[pts[0][0],y+1e-3]];const o=[pts[0]];for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(b[1]>=y){const u=(y-a[1])/((b[1]-a[1])||1);o.push([lerp(a[0],b[0],u),y]);return o}o.push(b)}const a=pts[pts.length-2],b=pts[pts.length-1],k=(b[0]-a[0])/((b[1]-a[1])||1);o.push([b[0]+k*(y-b[1]),y]);return o}
+function fromY(pts,y){const o=[];for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if(b[1]>y){if(!o.length){const u=(y-a[1])/((b[1]-a[1])||1);o.push([lerp(a[0],b[0],u),y])}o.push(b)}}return o}
 function area(p){let s=0;for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];s+=a[0]*b[1]-b[0]*a[1]}return s/2}
 function bbox(pts){let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;for(const[x,y]of pts){if(x<x0)x0=x;if(y<y0)y0=y;if(x>x1)x1=x;if(y>y1)y1=y}return{x0,y0,x1,y1,w:x1-x0,h:y1-y0}}
 function lineX(a,b,c,d){const r=[b[0]-a[0],b[1]-a[1]],s=[d[0]-c[0],d[1]-c[1]],den=r[0]*s[1]-r[1]*s[0];if(Math.abs(den)<1e-9)return null;const t=((c[0]-a[0])*s[1]-(c[1]-a[1])*s[0])/den;return[a[0]+t*r[0],a[1]+t*r[1]]}
@@ -251,19 +252,37 @@ function draftPants(m,o,ctx){
     const marks=[{t:"dash",pts:[[crease,hipY+2],[crease,L-2]]}];
     if(L>kneeY+3)marks.push({t:"line",pts:[[crease-2,kneeY],[crease+2,kneeY]]},{t:"text",at:[crease+3.6,kneeY-.6],str:"Knie"});
     if(dart>0){const x=isBack?(cw[0]+swx)/2:crease,yw=lerp(cw[1],rd,(x-cw[0])/(swx-cw[0]));marks.push({t:"line",pts:[[x-dart/2,yw],[x,yw+(isBack?12:8)],[x+dart/2,yw]]})}
+    // Schräger Eingriff: Ecke an Bund und Seitennaht wird ausgeschnitten, Seitenteil und Taschenbeutel liegen darunter
+    const wy=x=>lerp(cw[1],rd,(x-cw[0])/(swx-cw[0])),pocket=!isBack&&o.seitentaschen,p2y=rd+17;
+    const P1=[swx-4.5,wy(swx-4.5)],P2=cutY(sideFull,p2y).at(-1),sideEdge=pocket?fromY(side,p2y):side;
+    const tie=(x,y)=>[{t:"line",pts:[[x-.7,y+.6],[x+.7,y+2]]},{t:"line",pts:[[x-.7,y+2],[x+.7,y+.6]]},{t:"text",at:[x,y+3.6],str:"Band"}];
+    if(o.bindebaender){const xs=isBack?[swx-1.5]:[crease+(dart>0?dart/2+1.8:0),pocket?P1[0]-1.5:swx-1.5];for(const x of xs)marks.push(...tie(x,wy(x)))}
+    const hipD=plen(cutY(sideFull,hipY))-(pocket?plen(cutY(sideFull,p2y)):0);
     R.pieces.push(mk({name:isBack?"Hinterhose":"Vorderhose",cut:"2× gegengleich",grainX:crease,edges:[
-      {pts:[cw,[swx,rd]],sa:elastic?"casing":"seam"},{pts:side,sa:"seam"},{pts:[sE,iE],sa:cuff?"seam":"hem"},
+      {pts:[cw,pocket?P1:[swx,rd]],sa:elastic?"casing":"seam"},...(pocket?[{pts:[P1,P2],sa:"seam"}]:[]),{pts:sideEdge,sa:"seam"},{pts:[sE,iE],sa:cuff?"seam":"hem"},
       {pts:ins.slice().reverse(),sa:"seam"},{pts:crotch,sa:"seam"},{pts:[[0,hipY],cw],sa:!isBack&&!elastic&&!J?"facing":"seam"}],
-      notches:[isBack?{edge:1,d:plen(cutY(sideFull,hipY)),double:true}:{edge:1,d:plen(cutY(sideFull,hipY))}],marks,labelAt:[crease,hipY+(L-hipY)*.3]}));
+      notches:hipD>1?[{edge:pocket?2:1,d:hipD,double:isBack}]:[],marks,labelAt:[crease,hipY+(L-hipY)*.3]}));
+    if(pocket){
+      const A=[P1[0]-3,wy(P1[0]-3)],Sb=cutY(sideFull,rd+22).at(-1),cx=Math.min(Math.max(crease+1.5,P1[0]-10),A[0]-1),C=[cx,wy(cx)],Sb2=cutY(sideFull,rd+30).at(-1);
+      const opening=[{t:"dash",pts:[P1,P2]},{t:"text",at:[(P1[0]+P2[0])/2-1.6,(P1[1]+P2[1])/2],str:"Eingriff",rot:90}];
+      R.pieces.push(mk({name:"Seitenteil Tasche",cut:"2× gegengleich",grainX:(A[0]+swx)/2,edges:[
+        {pts:[A,[swx,rd]],sa:"seam"},{pts:cutY(sideFull,rd+22),sa:"seam"},{pts:bez(Sb,[Sb[0]-2,Sb[1]+1.5],[A[0]+2,rd+21],[A[0],rd+20],12),sa:"seam"},{pts:[[A[0],rd+20],A],sa:"seam"}],
+        marks:opening,labelAt:[(A[0]+swx)/2+.5,rd+13]}));
+      R.pieces.push(mk({name:"Taschenbeutel",cut:"4× (Futter, 2 Paar)",mat:"lining",grainX:(C[0]+swx)/2,edges:[
+        {pts:[C,[swx,rd]],sa:"seam"},{pts:cutY(sideFull,rd+30),sa:"seam"},{pts:bez(Sb2,[Sb2[0]-3,Sb2[1]+2],[C[0]+3,rd+28],[C[0],rd+27],12),sa:"seam"},{pts:[[C[0],rd+27],C],sa:"seam"}],
+        marks:opening,labelAt:[(C[0]+swx)/2,rd+17]}));
+    }
   });
   {const xAt=(P,y)=>{for(let i=1;i<P.length;i++)if(P[i][1]>=y){const a=P[i-1],b=P[i],u=(y-a[1])/((b[1]-a[1])||1);return lerp(a[0],b[0],u)}return P[P.length-1][0]};
    const[F,B]=pd,lc=y=>(xAt(F.sideFull,y)-xAt(F.insFull,y))+(xAt(B.sideFull,y)-xAt(B.insFull,y)),legs=[];for(let y=cy+1;y<L;y+=4)legs.push([y,lc(y)]);legs.push([L,lc(L)]);
-   R.shape={kind:"pants",cy,L,cuff:cuff?5:0,band:!elastic,torso:[[rd,2*((F.swx-F.cw[0])+(B.swx-B.cw[0]))],[hipY,2*(F.W+B.W)],[cy-1,2*(F.W+B.W)]],legs}}
+   R.shape={kind:"pants",cy,L,rd,ties:!!o.bindebaender,pockets:!!o.seitentaschen,cuff:cuff?5:0,band:!elastic,torso:[[rd,2*((F.swx-F.cw[0])+(B.swx-B.cw[0]))],[hipY,2*(F.W+B.W)],[cy-1,2*(F.W+B.W)]],legs}}
   if(!elastic){R.pieces.push(rectPiece("Bund","1×",8,Math.round(Wt+4),{foldLine:"v",rotatable:true}));
     if(!J){R.notions.push("Hosenreißverschluss, 18 cm");R.notions.push("1 Hosenknopf oder Haken");R.notions.push("Bügeleinlage für Bund und Schlitz");R.extras.push("Hosenschlitz: Untertritt 1× 8 × 20 cm im Stoffbruch zuschneiden. Der Übertritt ist an der vorderen Mitte angeschnitten (4 cm).")}}
   else{R.notions.push(`Gummiband 3 cm breit, ${fmt(Math.round(Wt*.9))} cm lang`);R.notions.push("Optional: Kordel 150 cm")}
   if(cuff)R.pieces.push(rectPiece("Beinbündchen","2× (Bündchenware)",Math.round(Hm*.8),14,{foldLine:"h",stretch:true,mat:J?"rib":"main"}));
   if(o.taschen)R.pieces.push(rectPiece("Gesäßtasche","2×",14,15,{types:["hem","seam","seam","seam"]}));
+  if(o.seitentaschen){R.notions.push("Futterstoff für die Taschenbeutel, ca. 0,3 m");R.extras.push("Eingriffkante der Vorderhose mit einem 1 cm breiten Formband verstärken, damit sie nicht ausleiert.")}
+  if(o.bindebaender)R.strips=[{name:"Bindeband",cut:"6×",w:3.5,h:130,note:"längs falten, zu 1,2 cm breiten Bändern steppen; Ansatzpunkte sind im Schnitt mit „Band“ markiert"}];
   return R;
 }
 
@@ -319,10 +338,11 @@ function packSheet(G,maxW){
   for(const t of items){if(x>0&&x+t.w>W){x=0;y+=rh+gap;rh=0}pos[t.i]=[x,y];x+=t.w+gap;rh=Math.max(rh,t.h);mx=Math.max(mx,x-gap)}
   return{pos,W:mx,H:y+rh};
 }
-function fabricNeed(G,fw){
+function fabricNeed(G,fw,strips=[]){
   const pack=(arr,width)=>{arr.sort((a,b)=>b.h-a.h);let x=0,y=0,rh=0;for(const t of arr){if(x>0&&x+t.w>width){x=0;y+=rh+1.5;rh=0}x+=t.w+1.5;rh=Math.max(rh,t.h)}return y+rh};
   const main=[],rib=[];let tooWide=null;
-  for(const g of G){const n=parseInt(g.p.cut)||1;let w=g.bb.w*(g.p.fold?2:1),h=g.bb.h;const tgt=g.p.mat==="rib"?rib:main,lim=g.p.mat==="rib"?70:fw;
+  for(const s of strips)for(let i=0;i<(parseInt(s.cut)||1);i++)main.push({w:Math.min(s.h,fw),h:s.w*Math.ceil(s.h/fw)});
+  for(const g of G){if(g.p.mat==="lining")continue;const n=parseInt(g.p.cut)||1;let w=g.bb.w*(g.p.fold?2:1),h=g.bb.h;const tgt=g.p.mat==="rib"?rib:main,lim=g.p.mat==="rib"?70:fw;
     if(w>lim&&g.p.rotatable&&h<=lim)[w,h]=[h,w];if(w>lim&&g.p.mat!=="rib")tooWide=g.p.name;for(let i=0;i<n;i++)tgt.push({w:Math.min(w,lim),h})}
   const len=main.length?Math.ceil((pack(main,fw)+10)/10)*10:0,rl=rib.length?Math.ceil((pack(rib,70)+5)/5)*5:0;
   return{len,rib:rl,tooWide};
@@ -402,9 +422,12 @@ function defaultSteps(S,R){
     const o=S.hose;
     if(R.pieces.some(p=>p.marks.some(m=>m.t==="line")))st.push("Abnäher nähen.");
     if(o.taschen)st.push("Gesäßtaschen säumen, umbügeln und auf die Hinterhosen steppen.");
-    st.push("Je Bein Vorder- und Hinterhose an Seiten- und Innenbeinnaht rechts auf rechts zusammennähen.");
+    if(o.bindebaender)st.push("Bindebänder längs rechts auf rechts falten, steppen, wenden und bügeln. Ein Ende jeweils schräg einschlagen und absteppen.");
+    if(o.seitentaschen)st.push("Seitenteil auf einen Taschenbeutel steppen. Den zweiten Taschenbeutel rechts auf rechts an die Eingriffkante der Vorderhose nähen, nach innen wenden, Kante absteppen. Beide Beutel aufeinanderlegen und unten rund zusammennähen; oben und seitlich im Bund und in der Seitennaht mitfassen.");
+    st.push(o.bindebaender?"Je Bein Vorder- und Hinterhose an Seiten- und Innenbeinnaht rechts auf rechts zusammennähen. Die seitlichen Bindebänder an der Markierung „Band“ in die Seitennaht mitfassen.":"Je Bein Vorder- und Hinterhose an Seiten- und Innenbeinnaht rechts auf rechts zusammennähen.");
     st.push("Ein Bein auf rechts wenden und in das andere stecken. Schrittnaht von der vorderen bis zur hinteren Mitte in einem Zug nähen, im Schrittbereich doppelt.");
     if(o.bund==="fest"&&S.stoff!=="jersey")st.push("Hosenschlitz mit Untertritt und Reißverschluss einnähen.");
+    if(o.bindebaender)st.push("Die vorderen Bindebänder an den Markierungen „Band“ an die Oberkante der Hose heften, damit sie beim Bundannähen mitgefasst werden.");
     st.push(o.bund==="gummizug"?"Oberkante für den Tunnel nach innen bügeln, absteppen, Gummiband einziehen.":"Bund mit Einlage verstärken, annähen, verstürzen und innen festnähen. Knopfloch und Knopf setzen.");
     st.push(o.bein==="jogger"?"Beinbündchen zum Ring schließen, falten und gedehnt annähen.":"Beinsäume umbügeln und absteppen.");
   }
@@ -412,4 +435,4 @@ function defaultSteps(S,R){
 }
 
 
-export {BUND_OPTS,FORM_OPTS,LEG_OPTS,LEN,LENS,MKEYS,SIZES,TOP_OPTS,TOP_TOG,TYPES,TYPNAME,arc,area,arrowHead,bbox,bez,buildPiece,capCurve,catmull,clean,cutY,defaultSteps,defaultTitle,dist,draft,draftPants,draftSkirt,draftTop,esc,fabricNeed,finishHem,fmt,getLen,lerp,lineX,mk,norm,offsetPiece,outline,packSheet,plen,pointAt,rectPiece,sizeLabel,sizeM,solveCap,svgList,topDefaults,RISE_OPTS};
+export {BUND_OPTS,FORM_OPTS,LEG_OPTS,LEN,LENS,MKEYS,SIZES,TOP_OPTS,TOP_TOG,TYPES,TYPNAME,arc,area,arrowHead,bbox,bez,buildPiece,capCurve,catmull,clean,cutY,defaultSteps,defaultTitle,dist,draft,draftPants,draftSkirt,draftTop,esc,fabricNeed,finishHem,fmt,getLen,lerp,lineX,mk,norm,offsetPiece,outline,packSheet,plen,pointAt,rectPiece,sizeLabel,sizeM,solveCap,svgList,topDefaults,RISE_OPTS,fromY};

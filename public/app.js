@@ -10,7 +10,7 @@ const S={
   oberteil:{...topDefaults(),lenKey:"huefte",len:null},
   kleid:{top:{...topDefaults(),silhouette:"ausgestellt"},taillennaht:false,rock:{form:"a_linie"},lenKey:"knie",len:null},
   rock:{form:"a_linie",bund:"fest",taschen:false,lenKey:"knie",len:null},
-  hose:{bein:"gerade",bund:"gummizug",leibhoehe:"normal",taschen:false,lenKey:"lang",len:null},
+  hose:{bein:"gerade",bund:"gummizug",leibhoehe:"normal",taschen:false,seitentaschen:false,bindebaender:false,lenKey:"lang",len:null},
   sa:{seam:1,hem:2.5},fw:140,title:null,analysis:null,example:true};
 try{const saved=JSON.parse(localStorage.getItem("fadenlauf-masse")||"null");if(saved&&saved.m&&MKEYS.every(([k])=>typeof saved.m[k]==="number")){S.m=saved.m;S.group=saved.group||"damen";S.size=saved.size||"eigene"}}catch(e){}
 let MODE=(()=>{try{return localStorage.getItem("fadenlauf-modus")||"easy"}catch(e){return"easy"}})();
@@ -69,7 +69,7 @@ function buildControls(){
   else if(S.typ==="kleid"){addTop(S.kleid.top,true);box.append(toggles(S.kleid,[["taillennaht","Taillennaht mit angesetztem Rock"]],"Aufbau"));
     if(S.kleid.taillennaht)box.append(seg("Rockform",FORM_OPTS,S.kleid.rock.form,v=>{S.kleid.rock.form=v}));box.append(lenField("kleid","Länge ab Taille"))}
   else if(S.typ==="rock"){box.append(seg("Form",FORM_OPTS,S.rock.form,v=>{S.rock.form=v}),seg("Bund",BUND_OPTS,S.rock.bund,v=>{S.rock.bund=v}),toggles(S.rock,[["taschen","Aufgesetzte Taschen"]],"Details"),lenField("rock","Länge ab Taille"))}
-  else{box.append(seg("Beinform",LEG_OPTS,S.hose.bein,v=>{S.hose.bein=v}),seg("Bundhöhe",RISE_OPTS,S.hose.leibhoehe||"normal",v=>{S.hose.leibhoehe=v}),seg("Bund",BUND_OPTS,S.hose.bund,v=>{S.hose.bund=v}),toggles(S.hose,[["taschen","Gesäßtaschen"]],"Details"),lenField("hose","Länge ab Taille"))}
+  else{box.append(seg("Beinform",LEG_OPTS,S.hose.bein,v=>{S.hose.bein=v}),seg("Bundhöhe",RISE_OPTS,S.hose.leibhoehe||"normal",v=>{S.hose.leibhoehe=v}),seg("Bund",BUND_OPTS,S.hose.bund,v=>{S.hose.bund=v}),toggles(S.hose,[["seitentaschen","Seitentaschen"],["taschen","Gesäßtaschen"],["bindebaender","Bindebänder"]],"Details"),lenField("hose","Länge ab Taille"))}
   const ss=$("#stoffSeg");ss.innerHTML="";ss.append(...seg(null,[["jersey","Jersey / dehnbar"],["webware","Webware / fest"]],S.stoff,v=>{S.stoff=v;S.sa.hem=v==="jersey"?2:2.5;S.sa.seam=v==="jersey"?.75:1}).children[0].children);
   $("#saSeam").value=S.sa.seam;$("#saHem").value=S.sa.hem;$("#fw").value=S.fw;
 }
@@ -93,14 +93,15 @@ function touched(rebuild=true){if(rebuild)buildControls();update()}
 
 function update(){
   const R=draft(),sa={seam:S.sa.seam,hem:S.sa.hem,fold:0,facing:4,casing:3.5},sl=sizeLabel();
-  const G=R.pieces.map(p=>buildPiece(p,sa,sl));const lay=packSheet(G,160);last={G,lay,R};
+  const G=R.pieces.map(p=>buildPiece(p,sa,sl)),strips=R.strips||[];const lay=packSheet(G,160);last={G,lay,R,strips};
   const title=S.title||defaultTitle();
   $("#sheetTitle").textContent=title;$("#badge").textContent=S.example?"Beispiel · lade ein Foto hoch":(S.source==="foto"?"Aus deinem Foto":S.source==="text"?"Aus deiner Beschreibung":S.source==="preset"?(photos.length?"Standardschnitt · Foto nicht ausgewertet":"Standardschnitt"):"Eigener Entwurf");
   renderSummary();
   $("#sheetSub").textContent=`${TYPNAME[S.typ]} · ${sl} · ${S.stoff==="jersey"?"Jersey":"Webware"} · ${G.length} Schnittteile · Bogen ${Math.round(lay.W)} × ${Math.round(lay.H)} cm`;
   renderSheet();build3D();
-  $("#cutBody").innerHTML=G.map(g=>`<tr><td>${esc(g.p.name)}${g.p.mat==="rib"?' <span style="color:var(--muted)">· Bündchen</span>':""}</td><td class="n">${esc(g.p.cut)}</td></tr>`).join("");
-  const F=fabricNeed(G,S.fw);
+  $("#cutBody").innerHTML=G.map(g=>`<tr><td>${esc(g.p.name)}${g.p.mat==="rib"?' <span style="color:var(--muted)">· Bündchen</span>':g.p.mat==="lining"?' <span style="color:var(--muted)">· Futter</span>':""}</td><td class="n">${esc(g.p.cut)}</td></tr>`).join("")
+    +strips.map(t=>`<tr><td>${esc(t.name)} <span style="color:var(--muted)">· ohne Schnittteil, ${fmt(t.w)} × ${fmt(t.h)} cm zuschneiden, ${esc(t.note)}</span></td><td class="n">${esc(t.cut)}</td></tr>`).join("");
+  const F=fabricNeed(G,S.fw,strips);
   $("#fabric").innerHTML=`<div><b>${fmt(F.len/100,2)} m</b><span>Oberstoff bei ${fmt(S.fw)} cm Breite</span></div>`+(F.rib?`<div><b>${fmt(F.rib)} cm</b><span>Bündchenware, Schlauch</span></div>`:"");
   const ex=[...R.extras,...R.notes];if(F.tooWide)ex.push(`„${F.tooWide}“ ist breiter als dein Stoff. Teile das Schnittteil mit einer zusätzlichen Naht oder nimm breiteren Stoff.`);
   ex.push("Schätzung, eher großzügig. Für Muster mit Richtung oder Karos 20–30 cm mehr einplanen.");
@@ -242,10 +243,18 @@ function build3D(animate=true){
   }else if(sh.kind==="pants"){
     const tr=garmRings(sh.torso,waistY,.72,true),g=addLoft(V.garm,tr,go);ringLine(V.garm,g,0,lo);seam(V.garm,g,0,lo);seam(V.garm,g,g.userData.N/2,lo);seam(V.garm,g,g.userData.N/4,lo);
     if(sh.band)ringLine(V.garm,loftGeo([{y:waistY-4,a:tr[0].a,b:tr[0].b}]),0,lo);
+    const legRs={};
     for(const sx of[-1,1]){
       const rs=[[sh.cy-4,sh.legs[0][1]],...sh.legs].map(([yy,C])=>{const y=waistY-yy,[a,b]=ell(C,.9),l=ringsAt(legR,y),r={y,cx:sx*legX,a:Math.max(a,l.a*1.04+.3),b:Math.max(b,l.b*1.04+.3)},e=circ(r.a,r.b)/circ(l.a,l.b)-1;if(e>.35){const e2=.35+(e-.35)*.85,f=(1+e2)/(1+e);r.a*=f;r.b*=f;r.amp=Math.min(.12,(e-e2)*.08);r.n=7}return r});
       if(sh.cuff){const l=rs[rs.length-1];rs.push({...l,y:l.y-.4,a:l.a*.82,b:l.b*.82,amp:0},{...l,y:l.y-sh.cuff,a:l.a*.8,b:l.b*.8,amp:0})}
-      const gl=addLoft(V.garm,rs,go),N=gl.userData.N;seam(V.garm,gl,sx>0?0:N/2,lo);seam(V.garm,gl,sx>0?N/2:0,lo);seam(V.garm,gl,N/4,{lc,dash:true});ringLine(V.garm,gl,rs.length-1,lo)}
+      legRs[sx]=rs;const gl=addLoft(V.garm,rs,go),N=gl.userData.N;seam(V.garm,gl,sx>0?0:N/2,lo);seam(V.garm,gl,sx>0?N/2:0,lo);seam(V.garm,gl,N/4,{lc,dash:true});ringLine(V.garm,gl,rs.length-1,lo)}
+    const y0=waistY-(sh.rd||0),at=(sx,th,y,out=1.02)=>{const r=ringsAt(tr,y);return new THREE.Vector3(sx*r.a*out*Math.cos(th),y,r.b*out*Math.sin(th))};
+    if(sh.pockets)for(const sx of[-1,1]){const pts=[];for(let i=0;i<=10;i++){const t=i/10;pts.push(at(sx,.55*(1-t),y0-17*t))}V.garm.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),lineMat(lc,false,true)))}
+    // Bindebänder hängen außen an der Hose: oberhalb des Schritts am Rumpfteil, darunter am Bein entlang
+    const crotchY=waistY-sh.cy,tieCol="#"+new THREE.Color(col).multiplyScalar(dark?2.4:.7).getHexString();
+    const onSurface=(sx,th,y,lift)=>{if(y>crotchY)return at(sx,th,y,1.03+lift);const r=ringsAt(legRs[sx].map(q=>({y:q.y,a:q.a*(1+(q.amp||0)),b:q.b*(1+(q.amp||0))})),y),ph=th*1.25;return new THREE.Vector3(sx*legX+sx*r.a*(1.04+lift)*Math.cos(ph),y,r.b*(1.04+lift)*Math.sin(ph))};
+    if(sh.ties)for(const sx of[-1,1])for(const[th,len,sw]of[[0,68,.04],[.45,58,.02],[1.05,52,.03]]){const pts=[];for(let i=0;i<=12;i++){const t=i/12;pts.push(onSurface(sx,th,y0-1.5-len*t,sw*Math.sin(t*3.1)))}
+      const curve=new THREE.CatmullRomCurve3(pts),tg=new THREE.TubeGeometry(curve,36,.5,6,false);V.garm.add(new THREE.Mesh(tg,toonMat(tieCol,false,true)),new THREE.Mesh(tg,inkMat(.12,0x1b231f,true)))}
   }
   arms.forEach(g=>g.children.forEach(c=>{if(c.userData.fig)c.visible=V.fig}));V.body.visible=V.fig;
   V.root.updateMatrixWorld(true);V.box=new THREE.Box3().setFromObject(V.garm);arms.forEach(g=>g.children.forEach(c=>{if(!c.userData.fig)V.box.expandByObject(c)}));
@@ -305,7 +314,7 @@ function renderSummary(){
     if(o.verschluss!=="keiner")c.push(lab(TOP_OPTS,"verschluss",o.verschluss));for(const[k,t]of TOP_TOG)if(o[k])c.push(t)}
   if(S.typ==="kleid"||S.typ==="rock"||S.typ==="hose"||S.typ==="oberteil"){const lk=S[S.typ].lenKey,le=(LENS[S.typ].find(x=>x[0]===lk)||[,"eigene"])[1];c.push("Länge: "+le)}
   if(S.typ==="rock")c.push("Form: "+(FORM_OPTS.find(x=>x[0]===S.rock.form)||[,S.rock.form])[1]);
-  if(S.typ==="hose")c.push("Bein: "+(LEG_OPTS.find(x=>x[0]===S.hose.bein)||[,S.hose.bein])[1],"Bundhöhe: "+(RISE_OPTS.find(x=>x[0]===(S.hose.leibhoehe||"normal"))||[,""])[1]);
+  if(S.typ==="hose")c.push("Bein: "+(LEG_OPTS.find(x=>x[0]===S.hose.bein)||[,S.hose.bein])[1],"Bundhöhe: "+(RISE_OPTS.find(x=>x[0]===(S.hose.leibhoehe||"normal"))||[,""])[1]);if(S.typ==="hose"){if(S.hose.seitentaschen)c.push("Seitentaschen");if(S.hose.taschen)c.push("Gesäßtaschen");if(S.hose.bindebaender)c.push("Bindebänder")}
   c.push(S.stoff==="jersey"?"Jersey":"Webware");
   box.innerHTML=`<span class="lbl">So setzt Fadenlauf es um</span><div class="chips">${c.map(t=>`<span>${esc(t)}</span>`).join("")}</div><p class="hint" style="margin:6px 0 0">Stimmt etwas nicht? Im Profi-Modus kannst du jede Option ändern.</p>`;
 }
@@ -316,7 +325,7 @@ function applyAnalysis(a){
   if(typ==="oberteil"){applyTop(S.oberteil);S.oberteil.lenKey=pick(T.laenge,LENS.oberteil.map(x=>x[0]),"huefte")}
   if(typ==="kleid"){applyTop(S.kleid.top);const K=a.kleid||{};S.kleid.taillennaht=!!K.taillennaht;S.kleid.lenKey=pick(K.laenge,LENS.kleid.map(x=>x[0]),"knie");if(a.rock)S.kleid.rock.form=pick(a.rock.form,FORM_OPTS.map(x=>x[0]),"a_linie")}
   if(typ==="rock"){const r=a.rock||{};S.rock.form=pick(r.form,FORM_OPTS.map(x=>x[0]),"a_linie");S.rock.bund=pick(r.bund,["fest","gummizug"],"fest");S.rock.taschen=!!r.taschen;S.rock.lenKey=pick(r.laenge,LENS.rock.map(x=>x[0]),"knie")}
-  if(typ==="hose"){const h=a.hose||{};S.hose.bein=pick(h.bein,LEG_OPTS.map(x=>x[0]),"gerade");S.hose.bund=pick(h.bund,["fest","gummizug"],"gummizug");S.hose.leibhoehe=pick(h.leibhoehe,RISE_OPTS.map(x=>x[0]),"normal");S.hose.taschen=!!h.taschen;S.hose.lenKey=pick(h.laenge,LENS.hose.map(x=>x[0]),"lang")}
+  if(typ==="hose"){const h=a.hose||{};S.hose.bein=pick(h.bein,LEG_OPTS.map(x=>x[0]),"gerade");S.hose.bund=pick(h.bund,["fest","gummizug"],"gummizug");S.hose.leibhoehe=pick(h.leibhoehe,RISE_OPTS.map(x=>x[0]),"normal");S.hose.taschen=!!h.taschen;S.hose.seitentaschen=!!h.seitentaschen;S.hose.bindebaender=!!h.bindebaender;S.hose.lenKey=pick(h.laenge,LENS.hose.map(x=>x[0]),"lang")}
   S.title=typeof a.erkannt==="string"&&a.erkannt.trim()?a.erkannt.trim().slice(0,60):null;S.analysis={...a,typ};S.example=false;
   const r=$("#aResult");r.hidden=false;r.innerHTML="";
   const h=document.createElement("h3");h.textContent=S.title||"Erkannt";const p=document.createElement("p");p.style.margin="0";p.textContent=a.beschreibung||"";r.append(h,p);
@@ -360,7 +369,7 @@ function applyPreset(k){
   if(k==="bluse"){S.typ="oberteil";S.stoff="webware";S.oberteil={...t,aermel:"lang",verschluss:"knopfleiste",kragen:"hemdkragen",manschetten:true,taschen:true,lenKey:"po",len:null}}
   if(k==="kleid"){S.typ="kleid";S.stoff="jersey";S.kleid={top:{...t,silhouette:"ausgestellt"},taillennaht:false,rock:{form:"a_linie"},lenKey:"knie",len:null}}
   if(k==="rock"){S.typ="rock";S.stoff="webware";S.rock={form:"a_linie",bund:"gummizug",taschen:false,lenKey:"knie",len:null}}
-  if(k==="hose"){S.typ="hose";S.stoff="jersey";S.hose={bein:"gerade",bund:"gummizug",leibhoehe:"normal",taschen:false,lenKey:"lang",len:null}}
+  if(k==="hose"){S.typ="hose";S.stoff="jersey";S.hose={bein:"gerade",bund:"gummizug",leibhoehe:"normal",taschen:false,seitentaschen:true,bindebaender:false,lenKey:"lang",len:null}}
   S.sa.seam=S.stoff==="jersey"?.75:1;S.sa.hem=S.stoff==="jersey"?2:2.5;
 }
 function applyKeyfacts(){
@@ -457,7 +466,8 @@ async function makePDF(kind){
   y=Math.max(y+56,y2+Math.ceil(MKEYS.length/2)*4.4+4,photoBottom+6);
   // Zuschnitt
   doc.setFont("helvetica","bold");doc.setFontSize(11);doc.text("Zuschnitt",15,y);y+=5.5;doc.setFontSize(9);
-  G.forEach(g=>{doc.setFont("helvetica","normal");doc.text(pdfTxt(g.p.name),15,y);doc.text(pdfTxt(g.p.cut),80,y);y+=4.6});
+  G.forEach(g=>{doc.setFont("helvetica","normal");doc.text(pdfTxt(g.p.name+(g.p.mat==="lining"?" (Futter)":"")),15,y);doc.text(pdfTxt(g.p.cut),80,y);y+=4.6});
+  (last.strips||[]).forEach(t=>{doc.text(pdfTxt(`${t.name} (ohne Schnittteil: ${fmt(t.w)} × ${fmt(t.h)} cm)`),15,y);doc.text(pdfTxt(t.cut),80,y);y+=4.6});
   y+=1.5;doc.setFont("helvetica","bold");doc.text(pdfTxt(`Stoffverbrauch ca. ${fmt(last.F.len/100,2)} m bei ${fmt(S.fw)} cm Breite`+(last.F.rib?`, Bündchenware ca. ${last.F.rib} cm`:"")),15,y);y+=5.5;
   for(const t of last.extras)y=pdfPara(doc,"• "+t,15,y,pg.w-30,8.5,pg);
   y+=2;doc.setFont("helvetica","bold");doc.setFontSize(11);doc.text("Zutaten",15,y);y+=5;for(const t of last.notions)y=pdfPara(doc,"• "+t,15,y,pg.w-30,9,pg);
@@ -528,4 +538,4 @@ addEventListener("beforeinstallprompt",e=>{e.preventDefault();installEvt=e;$("#i
 $("#install").onclick=async()=>{if(!installEvt)return;installEvt.prompt();await installEvt.userChoice.catch(()=>{});installEvt=null;$("#install").hidden=true};
 addEventListener("appinstalled",()=>{$("#install").hidden=true});
 
-window.__fl={makePDF,makeSVG,S,update,applyAnalysis,get last(){return last}};
+window.__fl={makePDF,makeSVG,S,update,applyAnalysis,rotate3D:r=>{if(V.ok){V.root.rotation.y=r;kick()}},get last(){return last}};

@@ -26,7 +26,7 @@ function* variants() {
       yield base({ stoff, group, size, m, typ: "kleid", kleid: { top: { ...F.topDefaults(), aermel: "kurz" }, taillennaht: true, rock: { form }, lenKey: "knie", len: null } });
     }
     for (const bein of ["eng", "gerade", "weit", "palazzo", "jogger"]) for (const bund of ["fest", "gummizug"]) for (const lenKey of ["kurz", "lang"]) for (const leibhoehe of ["normal", "tief", "hoch"])
-      yield base({ stoff, group, size, m, typ: "hose", hose: { bein, bund, leibhoehe, taschen: true, lenKey, len: null } });
+      yield base({ stoff, group, size, m, typ: "hose", hose: { bein, bund, leibhoehe, taschen: true, seitentaschen: lenKey === "lang", bindebaender: bund === "fest", lenKey, len: null } });
   }
 }
 
@@ -91,4 +91,21 @@ test("Palazzo ist weiter als weit, tiefer Bund ist weiter als Taillenbund", () =
   assert.ok(hem("palazzo").legs.at(-1)[1] > hem("weit").legs.at(-1)[1] * 1.2);
   assert.ok(hem("weit", "tief").torso[0][1] > hem("weit").torso[0][1]);
   assert.ok(hem("weit", "tief").torso[0][0] === 5 && hem("weit", "hoch").torso[0][0] === -4);
+});
+
+test("Schräge Eingrifftaschen: Seitenteil und Taschenbeutel schließen an die Vorderhose an", () => {
+  const S = base({ stoff: "webware", typ: "hose", hose: { bein: "palazzo", bund: "fest", leibhoehe: "tief", taschen: false, seitentaschen: true, bindebaender: true, lenKey: "lang", len: null } });
+  const R = F.draft(S), get = (n) => R.pieces.find((p) => p.name === n);
+  const front = get("Vorderhose"), side = get("Seitenteil Tasche"), bag = get("Taschenbeutel");
+  assert.ok(front && side && bag, "Taschenteile fehlen");
+  const opening = front.edges[1].pts, frontSide = front.edges[2].pts;
+  assert.ok(opening[1][1] - opening[0][1] > 15, "Eingriff zu kurz");
+  assert.deepEqual(frontSide[0].map((v) => +v.toFixed(3)), opening[1].map((v) => +v.toFixed(3)));
+  // Bund-Ende des Seitenteils liegt an der Seitennaht der Hose, unterhalb des Eingriffs geht die Seitennaht weiter
+  assert.ok(side.edges[0].pts[1][0] > opening[0][0] && side.edges[1].pts.at(-1)[1] > opening[1][1]);
+  assert.equal(bag.mat, "lining");
+  assert.equal(R.strips.length, 1);
+  assert.ok(front.marks.filter((m) => m.str === "Band").length === 2 && get("Hinterhose").marks.filter((m) => m.str === "Band").length === 1);
+  const G = R.pieces.map((p) => F.buildPiece(p, SA, "Gr. 38"));
+  assert.ok(F.fabricNeed(G, 140, R.strips).len > F.fabricNeed(G, 140).len, "Bindebänder fehlen im Stoffverbrauch");
 });
